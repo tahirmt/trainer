@@ -1,4 +1,18 @@
 module Trainer
+  class ParserSummary
+    attr_accessor :number_of_tests
+    attr_accessor :number_of_failures
+    
+    def tests_successful
+      number_of_failures == 0
+    end
+
+    def initialize(number_of_tests, number_of_failures)
+      @number_of_tests = number_of_tests
+      @number_of_failures = number_of_failures
+    end
+  end
+  
   class TestParser
     attr_accessor :data
 
@@ -56,7 +70,7 @@ module Trainer
         File.write(to_path, tp.to_junit)
         puts "Successfully generated '#{to_path}'"
 
-        return_hash[to_path] = tp.tests_successful?
+        return_hash[to_path] = tp.summary
       end
       return_hash
     end
@@ -86,6 +100,18 @@ module Trainer
     # @return [Bool] were all tests successful? Is false if at least one test failed
     def tests_successful?
       self.data.collect { |a| a[:number_of_failures] }.all?(&:zero?)
+    end
+
+    def summary 
+      number_of_tests = 0
+      number_of_failures = 0
+
+      self.data.each { |value|
+        number_of_tests += value[:number_of_tests]
+        number_of_failures += value[:number_of_failures]
+      }
+      
+      ParserSummary.new(number_of_tests,number_of_failures)
     end
 
     private
@@ -199,9 +225,9 @@ module Trainer
           failure = test.find_failure(failures)
           if failure
             test_row[:failures] = [{
-              file_name: "",
-              line_number: 0,
-              message: "",
+              file_name: failure.file_name,
+              line_number: failure.line_number,
+              message: failure.message,
               performance_failure: {},
               failure_message: failure.failure_message
             }]
